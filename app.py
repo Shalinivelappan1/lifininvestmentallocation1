@@ -1,145 +1,145 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 
-st.set_page_config(page_title="Behavioural Finance Lab", layout="centered")
+st.set_page_config(page_title="Portfolio Simulator", layout="centered")
 
-st.title("🧠 Behavioural Finance Simulator")
-st.write("See how panic, crashes, and rebalancing affect long-term wealth.")
+st.title("📊 How Should You Allocate Your Money?")
+st.write("This simulator helps you understand diversification, risk, and crypto allocation.")
 
-# -------- INPUTS ----------
-corpus = st.number_input("Initial portfolio (₹)", value=500000, step=50000)
-sip = st.number_input("Monthly SIP (₹)", value=10000, step=1000)
+st.divider()
+
+st.header("Step 1: Enter Investor Profile")
+
+age = st.slider("Age", 20, 60, 30)
+corpus = st.number_input("Total current investments (₹)", value=300000, step=50000)
+sip = st.number_input("Monthly investment/SIP (₹)", value=10000, step=1000)
+risk = st.selectbox("Risk appetite", ["Low", "Moderate", "High"])
 years = st.slider("Investment horizon (years)", 3, 25, 10)
 
-strategy = st.radio(
-    "Base allocation:",
-    ["Balanced", "All Equity", "All Crypto"]
+st.info(
+"""
+💡 **Discussion prompt for class:**  
+- Younger investors can take more risk. Why?  
+- What happens if someone needs money in 3 years?  
+"""
 )
 
-rebalance = st.toggle("Rebalance annually", True)
-continue_sip = st.toggle("Continue SIP during crash", True)
+st.divider()
 
-# -------- ALLOCATION ----------
-if strategy == "Balanced":
-    equity, debt, gold, crypto = 60, 25, 8, 7
-elif strategy == "All Equity":
-    equity, debt, gold, crypto = 100, 0, 0, 0
+st.header("Step 2: Recommended Allocation")
+
+# Allocation logic
+if risk == "Low":
+    equity = 45
+    debt = 45
+    gold = 7
+    crypto = 3
+
+elif risk == "Moderate":
+    equity = 60
+    debt = 25
+    gold = 8
+    crypto = 7
+
 else:
-    equity, debt, gold, crypto = 0, 0, 0, 100
+    equity = 70
+    debt = 15
+    gold = 5
+    crypto = 10
 
-# -------- INITIAL ----------
-eq0 = corpus * equity/100
-debt0 = corpus * debt/100
-gold0 = corpus * gold/100
-crypto0 = corpus * crypto/100
-
-# -------- BUTTONS ----------
-st.divider()
-st.header("Market Event")
-
-crash = st.button("💥 Simulate Crash (Year 1)")
-panic = st.button("😱 Panic Sell After Crash")
-
-# -------- RETURNS ----------
-eq_r = 0.12
-debt_r = 0.06
-gold_r = 0.07
-crypto_r = 0.15
-
-if crash:
-    eq_r = -0.30
-    crypto_r = -0.55
-
-# -------- FUNCTION ----------
-def simulate(panic_sell=False):
-    eq = eq0
-    debt = debt0
-    gold = gold0
-    crypto = crypto0
-
-    values = []
-    recovered = None
-
-    for y in range(1, years+1):
-
-        # crash in year 1
-        if y == 1 and crash:
-            eq *= (1 + eq_r)
-            crypto *= (1 + crypto_r)
-
-            if panic_sell:
-                debt += eq + crypto
-                eq = 0
-                crypto = 0
-
-        # normal growth
-        eq *= 1.12
-        debt *= 1.06
-        gold *= 1.07
-        crypto *= 1.15
-
-        # SIP
-        if continue_sip:
-            eq += sip * 0.6 * 12
-            debt += sip * 0.25 * 12
-            gold += sip * 0.08 * 12
-            crypto += sip * 0.07 * 12
-
-        total = eq + debt + gold + crypto
-        values.append(total)
-
-        if total >= corpus and recovered is None:
-            recovered = y
-
-        if rebalance:
-            eq = total * equity/100
-            debt = total * debt/100
-            gold = total * gold/100
-            crypto = total * crypto/100
-
-    return values, recovered
-
-# -------- RUN TWO SCENARIOS ----------
-values_calm, rec_calm = simulate(False)
-values_panic, rec_panic = simulate(True)
-
-# -------- RESULTS ----------
-st.divider()
-st.header("Outcome Comparison")
-
-final_calm = values_calm[-1]
-final_panic = values_panic[-1]
+eq_amt = corpus * equity/100
+debt_amt = corpus * debt/100
+gold_amt = corpus * gold/100
+crypto_amt = corpus * crypto/100
 
 col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("Stayed Invested")
-    st.metric("Final Value", f"₹{final_calm:,.0f}")
-    if rec_calm:
-        st.write(f"Recovery: {rec_calm} yrs")
+    st.metric("Equity (growth engine)", f"₹{eq_amt:,.0f}", f"{equity}%")
+    st.metric("Debt (stability)", f"₹{debt_amt:,.0f}", f"{debt}%")
 
 with col2:
-    st.subheader("Panic Sold")
-    st.metric("Final Value", f"₹{final_panic:,.0f}")
-    if rec_panic:
-        st.write(f"Recovery: {rec_panic} yrs")
+    st.metric("Gold (hedge)", f"₹{gold_amt:,.0f}", f"{gold}%")
+    st.metric("Crypto (high risk)", f"₹{crypto_amt:,.0f}", f"{crypto}%")
 
-# -------- GRAPH ----------
-st.subheader("Wealth Path")
+st.info(
+"""
+📚 **Concept:**  
+- Equity = long-term growth  
+- Debt = stability  
+- Gold = hedge against uncertainty  
+- Crypto = highly volatile satellite asset  
+
+Most portfolios keep crypto below 10%.
+"""
+)
+
+st.divider()
+
+st.header("Visual Allocation")
+
+labels = ['Equity','Debt','Gold','Crypto']
+sizes = [equity, debt, gold, crypto]
 
 fig, ax = plt.subplots()
-ax.plot(values_calm, label="Stayed Invested")
-ax.plot(values_panic, label="Panic Sold")
-ax.legend()
-ax.set_xlabel("Years")
-ax.set_ylabel("Portfolio Value")
+ax.pie(sizes, labels=labels, autopct='%1.0f%%')
+ax.axis('equal')
 st.pyplot(fig)
 
-# -------- TEACHING BOX ----------
-st.info("""
-Class discussion:
-• Who recovered faster?
-• Did panic selling lock losses?
-• Does rebalancing help recovery?
-• Should SIP stop during crashes?
-""")
+st.divider()
+
+st.header("Step 3: Monthly SIP Split")
+
+st.write(f"Equity SIP: ₹{sip*0.6:,.0f}")
+st.write(f"Debt SIP: ₹{sip*0.25:,.0f}")
+st.write(f"Gold SIP: ₹{sip*0.08:,.0f}")
+st.write(f"Crypto SIP: ₹{sip*0.07:,.0f}")
+
+st.info(
+"""
+💡 **Class question:**  
+If markets crash, which SIP should you pause first?  
+Why is crypto usually the smallest allocation?
+"""
+)
+
+st.divider()
+
+st.header("Step 4: Long-Term Projection")
+
+equity_return = 0.12
+debt_return = 0.06
+gold_return = 0.07
+crypto_return = 0.15
+
+future_value = (
+    eq_amt*(1+equity_return)**years +
+    debt_amt*(1+debt_return)**years +
+    gold_amt*(1+gold_return)**years +
+    crypto_amt*(1+crypto_return)**years
+)
+
+st.success(f"Estimated portfolio value in {years} years: ₹{future_value:,.0f}")
+
+st.warning(
+"""
+⚠️ **Important teaching point:**  
+Crypto returns are uncertain and highly volatile.  
+This projection assumes average returns — real outcomes can vary widely.
+"""
+)
+
+st.divider()
+
+st.header("Step 5: Rebalancing")
+
+st.write(
+"""
+Once a year:
+- If crypto becomes >10% → reduce  
+- Move profits to equity or debt  
+- Rebalancing controls risk  
+
+**Key lesson:** Asset allocation matters more than stock picking.
+"""
+)
