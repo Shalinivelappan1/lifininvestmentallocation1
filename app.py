@@ -148,110 +148,122 @@ st.divider()
 st.header("💥 Behaviour Simulator")
 
 crash_button = st.button("Simulate Market Crash")
-panic_button = st.button("😱 Panic Sell After Crash")
+panic_toggle = st.toggle("Investor panics after crash", False)
 rebalance_toggle = st.toggle("Rebalance yearly", value=True)
+sip_continue_toggle = st.toggle("Continue SIP during crash", True)
+num_crashes = st.slider("Number of crashes in horizon", 0, 3, 1)
 
-# Base returns
+# ---------------- RETURNS SLIDERS ----------------
 st.divider()
 st.header("Assumed Annual Returns (student inputs)")
 
-st.write("Students can change return assumptions to see impact on outcomes.")
+equity_return = st.slider("Equity return (%)", -40, 40, 12) / 100
+debt_return = st.slider("Debt return (%)", 0, 15, 6) / 100
+gold_return = st.slider("Gold return (%)", 0, 30, 7) / 100
+crypto_return = st.slider("Crypto return (%)", -50, 70, 15) / 100
 
-equity_return = st.slider(
-    "Equity return (%)", 
-    min_value=-40, max_value=40, value=12
-) / 100
+# crash overrides
+crash_equity = equity_return
+crash_crypto = crypto_return
 
-debt_return = st.slider(
-    "Debt return (%)", 
-    min_value=0, max_value=15, value=6
-) / 100
-
-gold_return = st.slider(
-    "Gold return (%)", 
-    min_value=0, max_value=30, value=7
-) / 100
-
-crypto_return = st.slider(
-    "Crypto return (%)", 
-    min_value=-50, max_value=70, value=15
-) / 100
-
-st.info("""
-Discussion prompts:
-• What happens if equity returns are lower than expected?  
-• What if crypto returns are negative?  
-• Are long-term assumptions realistic?
-""")
-
-# Apply crash
 if crash_button:
-    st.error("Market crash simulated: Equity -30%, Crypto -50%")
-    equity_return = -0.30
-    crypto_return = -0.50
+    st.error("Crash applied: Equity -30%, Crypto -50%")
+    crash_equity = -0.30
+    crash_crypto = -0.50
 
-# Initial values
-eq = eq_amt
-debt_v = debt_amt
-gold_v = gold_amt
-crypto_v = crypto_amt
+# ---------------- SIM FUNCTION ----------------
+def run_simulation(panic=False):
 
-initial_total = eq + debt_v + gold_v + crypto_v
-values = []
-recovery_year = None
+    eq = eq_amt
+    debt_v = debt_amt
+    gold_v = gold_amt
+    crypto_v = crypto_amt
 
-for year in range(1, years+1):
+    initial_total = eq + debt_v + gold_v + crypto_v
+    values = []
+    recovery_year = None
 
-    # Crash happens in year 1
-    if year == 1 and crash_button:
+    # decide crash years
+    crash_years = []
+    if crash_button and num_crashes > 0:
+        interval = years // (num_crashes + 1)
+        crash_years = [interval*(i+1) for i in range(num_crashes)]
+
+    for year in range(1, years+1):
+
+        # ---- crash event ----
+        if year in crash_years:
+            eq *= (1 + crash_equity)
+            crypto_v *= (1 + crash_crypto)
+
+            if panic:
+                debt_v += eq + crypto_v
+                eq = 0
+                crypto_v = 0
+
+        # ---- normal growth ----
         eq *= (1 + equity_return)
+        debt_v *= (1 + debt_return)
+        gold_v *= (1 + gold_return)
         crypto_v *= (1 + crypto_return)
 
-        if panic_button:
-            st.warning("Investor panics and shifts risky assets to debt!")
-            debt_v += eq + crypto_v
-            eq = 0
-            crypto_v = 0
+        # ---- SIP ----
+        if sip_continue_toggle or year not in crash_years:
+            eq += sip * 0.6 * 12
+            debt_v += sip * 0.25 * 12
+            gold_v += sip * 0.08 * 12
+            crypto_v += sip * 0.07 * 12
 
-    # Normal growth thereafter
-    eq *= 1.12
-    debt_v *= 1.06
-    gold_v *= 1.07
-    crypto_v *= 1.15
+        total = eq + debt_v + gold_v + crypto_v
+        values.append(total)
 
-    total = eq + debt_v + gold_v + crypto_v
-    values.append(total)
+        if total >= initial_total and recovery_year is None:
+            recovery_year = year
 
-    if total >= initial_total and recovery_year is None:
-        recovery_year = year
+        # ---- rebalance ----
+        if rebalance_toggle and total > 0:
+            eq = total * equity/100
+            debt_v = total * debt/100
+            gold_v = total * gold/100
+            crypto_v = total * crypto/100
 
-    # Rebalancing
-    if rebalance_toggle:
-        eq = total * equity/100
-        debt_v = total * debt/100
-        gold_v = total * gold/100
-        crypto_v = total * crypto/100
+    return values, recovery_year
 
-final_value = values[-1]
+# run both scenarios
+values_calm, rec_calm = run_simulation(panic=False)
+values_panic, rec_panic = run_simulation(panic=True)
 
-st.subheader("📈 Outcome After Simulation")
-st.success(f"Final value after {years} years: ₹{final_value:,.0f}")
+# ---------------- RESULTS ----------------
+st.divider()
+st.header("📊 Calm vs Panic Comparison")
 
-if recovery_year:
-    st.info(f"Portfolio recovered to original value in {recovery_year} years")
-else:
-    st.warning("Portfolio did not recover within selected horizon")
+col1, col2 = st.columns(2)
 
-# Chart
+with col1:
+    st.subheader("Stayed Invested")
+    st.metric("Final Value", f"₹{values_calm[-1]:,.0f}")
+    if rec_calm:
+        st.write(f"Recovery: {rec_calm} yrs")
+
+with col2:
+    st.subheader("Panicked")
+    st.metric("Final Value", f"₹{values_panic[-1]:,.0f}")
+    if rec_panic:
+        st.write(f"Recovery: {rec_panic} yrs")
+
+# chart
 fig2, ax2 = plt.subplots()
-ax2.plot(range(1, years+1), values)
+ax2.plot(range(1, years+1), values_calm, label="Calm investor")
+ax2.plot(range(1, years+1), values_panic, label="Panic investor")
+ax2.legend()
 ax2.set_xlabel("Years")
 ax2.set_ylabel("Portfolio Value")
 st.pyplot(fig2)
 
 st.info("""
-Class discussion prompts:
-• What did panic selling do to recovery time?
-• Did rebalancing help?
-• Who survives a crash better?
+Class prompts:
+• Does panic delay recovery?
+• Does SIP help during crashes?
+• What if crashes happen twice?
+• Does rebalancing reduce damage?
 """)
