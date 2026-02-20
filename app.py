@@ -152,10 +152,37 @@ panic_button = st.button("😱 Panic Sell After Crash")
 rebalance_toggle = st.toggle("Rebalance yearly", value=True)
 
 # Base returns
-equity_return = 0.12
-debt_return = 0.06
-gold_return = 0.07
-crypto_return = 0.15
+st.divider()
+st.header("Assumed Annual Returns (student inputs)")
+
+st.write("Students can change return assumptions to see impact on outcomes.")
+
+equity_return = st.slider(
+    "Equity return (%)", 
+    min_value=-20, max_value=20, value=12
+) / 100
+
+debt_return = st.slider(
+    "Debt return (%)", 
+    min_value=0, max_value=12, value=6
+) / 100
+
+gold_return = st.slider(
+    "Gold return (%)", 
+    min_value=0, max_value=15, value=7
+) / 100
+
+crypto_return = st.slider(
+    "Crypto return (%)", 
+    min_value=-50, max_value=40, value=15
+) / 100
+
+st.info("""
+Discussion prompts:
+• What happens if equity returns are lower than expected?  
+• What if crypto returns are negative?  
+• Are long-term assumptions realistic?
+""")
 
 # Apply crash
 if crash_button:
