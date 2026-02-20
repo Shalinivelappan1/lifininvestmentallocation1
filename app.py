@@ -159,22 +159,22 @@ st.write("Students can change return assumptions to see impact on outcomes.")
 
 equity_return = st.slider(
     "Equity return (%)", 
-    min_value=-20, max_value=20, value=12
+    min_value=-40, max_value=40, value=12
 ) / 100
 
 debt_return = st.slider(
     "Debt return (%)", 
-    min_value=0, max_value=12, value=6
+    min_value=0, max_value=15, value=6
 ) / 100
 
 gold_return = st.slider(
     "Gold return (%)", 
-    min_value=0, max_value=15, value=7
+    min_value=0, max_value=30, value=7
 ) / 100
 
 crypto_return = st.slider(
     "Crypto return (%)", 
-    min_value=-50, max_value=40, value=15
+    min_value=-50, max_value=70, value=15
 ) / 100
 
 st.info("""
