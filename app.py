@@ -143,3 +143,88 @@ Once a year:
 **Key lesson:** Asset allocation matters more than stock picking.
 """
 )
+
+st.divider()
+st.header("💥 Behaviour Simulator")
+
+crash_button = st.button("Simulate Market Crash")
+panic_button = st.button("😱 Panic Sell After Crash")
+rebalance_toggle = st.toggle("Rebalance yearly", value=True)
+
+# Base returns
+equity_return = 0.12
+debt_return = 0.06
+gold_return = 0.07
+crypto_return = 0.15
+
+# Apply crash
+if crash_button:
+    st.error("Market crash simulated: Equity -30%, Crypto -50%")
+    equity_return = -0.30
+    crypto_return = -0.50
+
+# Initial values
+eq = eq_amt
+debt_v = debt_amt
+gold_v = gold_amt
+crypto_v = crypto_amt
+
+initial_total = eq + debt_v + gold_v + crypto_v
+values = []
+recovery_year = None
+
+for year in range(1, years+1):
+
+    # Crash happens in year 1
+    if year == 1 and crash_button:
+        eq *= (1 + equity_return)
+        crypto_v *= (1 + crypto_return)
+
+        if panic_button:
+            st.warning("Investor panics and shifts risky assets to debt!")
+            debt_v += eq + crypto_v
+            eq = 0
+            crypto_v = 0
+
+    # Normal growth thereafter
+    eq *= 1.12
+    debt_v *= 1.06
+    gold_v *= 1.07
+    crypto_v *= 1.15
+
+    total = eq + debt_v + gold_v + crypto_v
+    values.append(total)
+
+    if total >= initial_total and recovery_year is None:
+        recovery_year = year
+
+    # Rebalancing
+    if rebalance_toggle:
+        eq = total * equity/100
+        debt_v = total * debt/100
+        gold_v = total * gold/100
+        crypto_v = total * crypto/100
+
+final_value = values[-1]
+
+st.subheader("📈 Outcome After Simulation")
+st.success(f"Final value after {years} years: ₹{final_value:,.0f}")
+
+if recovery_year:
+    st.info(f"Portfolio recovered to original value in {recovery_year} years")
+else:
+    st.warning("Portfolio did not recover within selected horizon")
+
+# Chart
+fig2, ax2 = plt.subplots()
+ax2.plot(range(1, years+1), values)
+ax2.set_xlabel("Years")
+ax2.set_ylabel("Portfolio Value")
+st.pyplot(fig2)
+
+st.info("""
+Class discussion prompts:
+• What did panic selling do to recovery time?
+• Did rebalancing help?
+• Who survives a crash better?
+""")
