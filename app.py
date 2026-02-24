@@ -185,7 +185,7 @@ def run_simulation(panic=False):
 
     crash_years = []
     if crash_button and num_crashes > 0:
-        interval = years // (num_crashes + 1)
+        interval = years // (num_crashes + 2)
         crash_years = [interval*(i+1) for i in range(num_crashes)]
 
     panic_cooldown = 0   # years investor stays out
