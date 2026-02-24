@@ -28,24 +28,31 @@ st.divider()
 
 st.header("Step 2: Recommended Allocation")
 
-# Allocation logic
+# ================= AGE + RISK BASED ALLOCATION =================
+
+base_equity = 100 - age   # classic rule
+
+# risk adjustments
 if risk == "Low":
-    equity = 45
-    debt = 45
-    gold = 7
-    crypto = 3
-
+    base_equity -= 15
+    crypto = 2
 elif risk == "Moderate":
-    equity = 60
-    debt = 25
-    gold = 8
-    crypto = 7
-
+    crypto = 5
 else:
-    equity = 70
-    debt = 15
-    gold = 5
+    base_equity += 10
     crypto = 10
+
+# keep bounds sensible
+base_equity = max(30, min(base_equity, 80))
+
+equity = base_equity
+debt = 100 - equity - crypto - 5   # leave room for gold
+gold = 5
+
+# safety correction
+if debt < 10:
+    debt = 10
+    equity = 100 - debt - gold - crypto
 
 eq_amt = corpus * equity/100
 debt_amt = corpus * debt/100
