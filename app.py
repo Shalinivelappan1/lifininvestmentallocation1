@@ -233,15 +233,13 @@ def run_simulation(panic=False):
        
                 # ---- REBALANCE BEFORE RECORDING VALUE ----
         total = eq + debt_v + gold_v + crypto_v
+        values.append(total)
         
         if rebalance_toggle and out_years_left == 0 and total > 0:
             eq = total * equity/100
             debt_v = total * debt/100
             gold_v = total * gold/100
             crypto_v = total * crypto/100
-            total = eq + debt_v + gold_v + crypto_v  # recompute
-
-        values.append(total)
 
     return values, recovery_year
 # run both scenarios
