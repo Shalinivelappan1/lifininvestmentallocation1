@@ -183,40 +183,49 @@ def run_simulation(panic=False):
     values = []
     recovery_year = None
 
-    # ---------------- CRASH YEARS ----------------
+    # ---- choose crash years safely ----
     crash_years = []
     if crash_button and num_crashes > 0:
-        interval = years // (num_crashes + 2)
-        crash_years = [interval*(i+1) for i in range(num_crashes)]
+        gap = years // (num_crashes + 1)
+        crash_years = [gap*(i+1) for i in range(num_crashes)]
 
-    panic_cooldown = 0   # how many years panic investor stays out
+    panic_cooldown = 0   # years remaining out of market
 
     for year in range(1, years+1):
 
-        # ---------------- CRASH EVENT ----------------
+        # ===============================
+        # CRASH EVENT
+        # ===============================
         if year in crash_years:
+
+            # calm investor takes hit
             eq *= (1 + crash_equity)
             crypto_v *= (1 + crash_crypto)
 
-            if panic:
-                # sell after crash
+            # panic sells AFTER crash
+            if panic and panic_cooldown == 0:
                 debt_v += eq + crypto_v
                 eq = 0
                 crypto_v = 0
-                panic_cooldown = 2   # sits out 2 years
+                panic_cooldown = 2   # stays out 2 full years
 
-        # ---------------- NORMAL RETURNS ----------------
+        # ===============================
+        # RETURNS
+        # ===============================
         if panic_cooldown == 0:
             eq *= (1 + equity_return)
             crypto_v *= (1 + crypto_return)
         else:
-            panic_cooldown -= 1   # reduce by ONE year each loop
+            panic_cooldown -= 1   # count down only
 
         debt_v *= (1 + debt_return)
         gold_v *= (1 + gold_return)
 
-        # ---------------- SIP ----------------
+        # ===============================
+        # SIP
+        # ===============================
         if sip_continue_toggle or year not in crash_years:
+
             if panic_cooldown == 0:
                 eq += sip * 0.6 * 12
                 crypto_v += sip * 0.07 * 12
@@ -230,7 +239,9 @@ def run_simulation(panic=False):
         if total >= initial_total and recovery_year is None:
             recovery_year = year
 
-        # ---------------- REBALANCE ----------------
+        # ===============================
+        # REBALANCE
+        # ===============================
         if rebalance_toggle and panic_cooldown == 0 and total > 0:
             eq = total * equity/100
             debt_v = total * debt/100
