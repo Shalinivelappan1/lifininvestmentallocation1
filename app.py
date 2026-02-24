@@ -183,42 +183,46 @@ def run_simulation(panic=False):
     values = []
     recovery_year = None
 
-    # ---------- crash year placement ----------
     crash_years = []
     if crash_button and num_crashes > 0:
         gap = years // (num_crashes + 1)
         crash_years = [gap*(i+1) for i in range(num_crashes)]
 
-    out_years_left = 0   # years remaining out of market
+    out_years_left = 0
+    was_panicked = False
 
     for year in range(1, years+1):
 
-        # ---------- CRASH ----------
+        # ---- CRASH ----
         if year in crash_years:
-
             eq *= (1 + crash_equity)
             crypto_v *= (1 + crash_crypto)
 
-            if panic and out_years_left == 0:
-                # sell AFTER crash
+            if panic and not was_panicked:
                 debt_v += eq + crypto_v
                 eq = 0
                 crypto_v = 0
-                out_years_left = 2   # stays out 2 full years
+                out_years_left = 2
+                was_panicked = True
 
-        # ---------- RETURNS ----------
+        # ---- RETURNS ----
         if out_years_left == 0:
             eq *= (1 + equity_return)
             crypto_v *= (1 + crypto_return)
         else:
-            out_years_left -= 1   # stays fully in debt
+            out_years_left -= 1
+
+            # FORCE RE-ENTRY AFTER COOLDOWN
+            if out_years_left == 0 and was_panicked:
+                eq = debt_v * 0.7
+                crypto_v = debt_v * 0.1
+                debt_v = debt_v * 0.2
 
         debt_v *= (1 + debt_return)
         gold_v *= (1 + gold_return)
 
-        # ---------- SIP ----------
+        # ---- SIP ----
         if sip_continue_toggle or year not in crash_years:
-
             if out_years_left == 0:
                 eq += sip * 0.6 * 12
                 crypto_v += sip * 0.07 * 12
@@ -232,7 +236,7 @@ def run_simulation(panic=False):
         if total >= initial_total and recovery_year is None:
             recovery_year = year
 
-        # ---------- REBALANCE ----------
+        # ---- REBALANCE ----
         if rebalance_toggle and out_years_left == 0 and total > 0:
             eq = total * equity/100
             debt_v = total * debt/100
