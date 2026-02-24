@@ -188,7 +188,7 @@ def run_simulation(panic=False):
         interval = years // (num_crashes + 2)
         crash_years = [interval*(i+1) for i in range(num_crashes)]
 
-    panic_cooldown = 0   # years investor stays out
+    panic_cooldown = 2   # years investor stays out
 
     for year in range(1, years+1):
 
@@ -208,7 +208,7 @@ def run_simulation(panic=False):
             eq *= (1 + equity_return)
             crypto_v *= (1 + crypto_return)
         else:
-            panic_cooldown -= 1   # stays in debt, misses rebound
+            panic_cooldown -= 2   # stays in debt, misses rebound
 
         debt_v *= (1 + debt_return)
         gold_v *= (1 + gold_return)
